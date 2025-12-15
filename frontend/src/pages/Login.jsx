@@ -15,6 +15,7 @@ const Login = () => {
     const navigate = useNavigate();
     const { login } = useAuth();
 
+    const APP_NAME = import.meta.env.VITE_APP_NAME;
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
@@ -55,7 +56,7 @@ const Login = () => {
                                 </h1>
                                 <p className="text-sm text-slate-600 mt-2 flex items-center justify-center gap-1">
                                     <Sparkles className="h-4 w-4 text-purple-500" />
-                                    Sign in to MediCare Dashboard
+                                    Sign in to {APP_NAME} Dashboard
                                 </p>
                             </div>
                         </div>
@@ -192,7 +193,7 @@ const Login = () => {
                         {/* Title */}
                         <div className="space-y-3">
                             <h2 className="text-5xl font-bold bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 bg-clip-text text-transparent">
-                                MediCare
+                                {APP_NAME}
                             </h2>
                             <p className="text-xl text-slate-700 font-medium">
                                 Patient Management System

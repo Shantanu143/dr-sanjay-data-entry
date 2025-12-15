@@ -65,6 +65,7 @@ export function AppSidebar({ ...props }) {
     const location = useLocation()
     const navigate = useNavigate()
     const { logout, user } = useAuth()
+    const APP_NAME = import.meta.env.VITE_APP_NAME
 
     const handleLogout = () => {
         logout()
@@ -83,7 +84,7 @@ export function AppSidebar({ ...props }) {
                                 </div>
                                 <div className="grid flex-1 text-left text-sm leading-tight">
                                     <span className="truncate font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-                                        MediCare
+                                        {APP_NAME}
                                     </span>
                                     <span className="truncate text-xs text-slate-500">
                                         Patient Management

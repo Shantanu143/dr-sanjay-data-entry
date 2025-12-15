@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 
 const Sidebar = () => {
+    const APP_NAME = import.meta.env.VITE_APP_NAME
     const location = useLocation();
     const navigate = useNavigate();
     const { logout } = useAuth();
@@ -33,7 +34,7 @@ const Sidebar = () => {
                 <div className="flex items-center gap-2">
                     <Activity className="h-8 w-8 text-primary" />
                     <div>
-                        <h1 className="text-xl font-bold">MediCare</h1>
+                        <h1 className="text-xl font-bold">{APP_NAME}</h1>
                         <p className="text-xs text-muted-foreground">Patient Management</p>
                     </div>
                 </div>
@@ -50,8 +51,8 @@ const Sidebar = () => {
                                 <Link
                                     to={item.path}
                                     className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${isActive
-                                            ? 'bg-primary text-primary-foreground'
-                                            : 'hover:bg-accent hover:text-accent-foreground'
+                                        ? 'bg-primary text-primary-foreground'
+                                        : 'hover:bg-accent hover:text-accent-foreground'
                                         }`}
                                 >
                                     <Icon className="h-5 w-5" />
