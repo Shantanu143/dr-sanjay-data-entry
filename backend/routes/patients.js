@@ -108,8 +108,24 @@ router.post(
                 return res.status(400).json({ errors: errors.array() });
             }
 
+            // Create first visit with medical information
+            const firstVisit = {
+                visitDate: new Date(),
+                notes: req.body.caseTaking || '',
+                diagnosis: req.body.diagnosis || '',
+                protocol: req.body.protocol || '',
+                symptoms: req.body.caseTaking || '', // Use case taking as initial symptoms
+                createdBy: req.user._id,
+            };
+
             const patient = await Patient.create({
-                ...req.body,
+                name: req.body.name,
+                address: req.body.address,
+                phoneNo: req.body.phoneNo,
+                age: req.body.age,
+                gender: req.body.gender,
+                consent: req.body.consent,
+                visits: [firstVisit], // Add first visit automatically
                 createdBy: req.user._id,
             });
 
@@ -165,6 +181,81 @@ router.delete('/:id', protect, async (req, res) => {
         await Patient.findByIdAndDelete(req.params.id);
 
         res.json({ message: 'Patient removed' });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+// @route   POST /api/patients/:id/visits
+// @desc    Add a new visit to patient
+// @access  Private
+router.post('/:id/visits', protect, async (req, res) => {
+    try {
+        const patient = await Patient.findById(req.params.id);
+
+        if (!patient) {
+            return res.status(404).json({ message: 'Patient not found' });
+        }
+
+        const newVisit = {
+            visitDate: req.body.visitDate || new Date(),
+            notes: req.body.notes,
+            diagnosis: req.body.diagnosis,
+            protocol: req.body.protocol,
+            symptoms: req.body.symptoms,
+            createdBy: req.user._id,
+        };
+
+        patient.visits.push(newVisit);
+        await patient.save();
+
+        res.status(201).json(patient);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+// @route   GET /api/patients/:id/visits
+// @desc    Get all visits for a patient
+// @access  Private
+router.get('/:id/visits', protect, async (req, res) => {
+    try {
+        const patient = await Patient.findById(req.params.id);
+
+        if (!patient) {
+            return res.status(404).json({ message: 'Patient not found' });
+        }
+
+        // Sort visits by date (most recent first)
+        const visits = patient.visits.sort((a, b) => new Date(b.visitDate) - new Date(a.visitDate));
+
+        res.json(visits);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+// @route   DELETE /api/patients/:id/visits/:visitId
+// @desc    Delete a visit from patient
+// @access  Private
+router.delete('/:id/visits/:visitId', protect, async (req, res) => {
+    try {
+        const patient = await Patient.findById(req.params.id);
+
+        if (!patient) {
+            return res.status(404).json({ message: 'Patient not found' });
+        }
+
+        patient.visits = patient.visits.filter(
+            (visit) => visit._id.toString() !== req.params.visitId
+        );
+
+        await patient.save();
+
+        res.json({ message: 'Visit removed', patient });
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Server error' });

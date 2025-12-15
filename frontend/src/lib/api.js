@@ -1,9 +1,9 @@
 import axios from 'axios';
-
-const API_URL = 'https://dr-sanjay-data-entry.onrender.com/api';
+import { API_URL, API_TIMEOUT, TOKEN_KEY, USER_KEY } from './constants';
 
 const api = axios.create({
     baseURL: API_URL,
+    timeout: API_TIMEOUT,
     headers: {
         'Content-Type': 'application/json',
     },
@@ -12,7 +12,7 @@ const api = axios.create({
 // Add token to requests
 api.interceptors.request.use(
     (config) => {
-        const token = localStorage.getItem('token');
+        const token = localStorage.getItem(TOKEN_KEY);
         if (token) {
             config.headers.Authorization = `Bearer ${token}`;
         }
@@ -28,8 +28,8 @@ api.interceptors.response.use(
     (response) => response,
     (error) => {
         if (error.response?.status === 401) {
-            localStorage.removeItem('token');
-            localStorage.removeItem('user');
+            localStorage.removeItem(TOKEN_KEY);
+            localStorage.removeItem(USER_KEY);
             window.location.href = '/login';
         }
         return Promise.reject(error);

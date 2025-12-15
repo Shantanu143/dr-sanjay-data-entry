@@ -9,7 +9,7 @@ import api from '../lib/api';
 import {
     ArrowLeft, Edit, Save, X, User, Phone, Calendar, MapPin,
     FileText, Stethoscope, ClipboardList, CheckCircle, XCircle,
-    Sparkles, Shield, Clock, Mail
+    Sparkles, Shield, Clock, Mail, Plus, Trash2, Activity, TrendingUp
 } from 'lucide-react';
 
 const PatientDetail = () => {
@@ -21,6 +21,15 @@ const PatientDetail = () => {
     const [editMode, setEditMode] = useState(searchParams.get('edit') === 'true');
     const [saving, setSaving] = useState(false);
     const [formData, setFormData] = useState({});
+    const [visits, setVisits] = useState([]);
+    const [showVisitModal, setShowVisitModal] = useState(false);
+    const [visitFormData, setVisitFormData] = useState({
+        visitDate: new Date().toISOString().split('T')[0],
+        notes: '',
+        diagnosis: '',
+        protocol: '',
+        symptoms: '',
+    });
 
     useEffect(() => {
         fetchPatient();
@@ -31,6 +40,7 @@ const PatientDetail = () => {
             const response = await api.get(`/patients/${id}`);
             setPatient(response.data);
             setFormData(response.data);
+            setVisits(response.data.visits || []);
             setLoading(false);
         } catch (error) {
             console.error('Error fetching patient:', error);
@@ -66,6 +76,67 @@ const PatientDetail = () => {
     const handleCancel = () => {
         setFormData(patient);
         setEditMode(false);
+    };
+
+    // Calculate gap between visits
+    const calculateGap = (date1, date2) => {
+        const diff = Math.abs(new Date(date1) - new Date(date2));
+        const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+
+        if (days === 0) return 'Same day';
+        if (days === 1) return '1 day';
+        if (days < 7) return `${days} days`;
+        if (days < 30) {
+            const weeks = Math.floor(days / 7);
+            return weeks === 1 ? '1 week' : `${weeks} weeks`;
+        }
+        if (days < 365) {
+            const months = Math.floor(days / 30);
+            return months === 1 ? '1 month' : `${months} months`;
+        }
+        const years = Math.floor(days / 365);
+        return years === 1 ? '1 year' : `${years} years`;
+    };
+
+    const handleVisitFormChange = (e) => {
+        const { name, value } = e.target;
+        setVisitFormData((prev) => ({
+            ...prev,
+            [name]: value,
+        }));
+    };
+
+    const handleAddVisit = async () => {
+        try {
+            setSaving(true);
+            await api.post(`/patients/${id}/visits`, visitFormData);
+            await fetchPatient(); // Refresh patient data
+            setShowVisitModal(false);
+            setVisitFormData({
+                visitDate: new Date().toISOString().split('T')[0],
+                notes: '',
+                diagnosis: '',
+                protocol: '',
+                symptoms: '',
+            });
+        } catch (error) {
+            console.error('Error adding visit:', error);
+            alert('Failed to add visit');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const handleDeleteVisit = async (visitId) => {
+        if (!window.confirm('Are you sure you want to delete this visit?')) return;
+
+        try {
+            await api.delete(`/patients/${id}/visits/${visitId}`);
+            await fetchPatient(); // Refresh patient data
+        } catch (error) {
+            console.error('Error deleting visit:', error);
+            alert('Failed to delete visit');
+        }
     };
 
     if (loading) {
@@ -312,10 +383,10 @@ const PatientDetail = () => {
                                 ) : (
                                     <div className="glass-card rounded-lg p-3">
                                         <span className={`px-3 py-1 rounded-full text-sm font-semibold ${patient.gender === 'Male'
-                                                ? 'bg-blue-100 text-blue-700'
-                                                : patient.gender === 'Female'
-                                                    ? 'bg-pink-100 text-pink-700'
-                                                    : 'bg-purple-100 text-purple-700'
+                                            ? 'bg-blue-100 text-blue-700'
+                                            : patient.gender === 'Female'
+                                                ? 'bg-pink-100 text-pink-700'
+                                                : 'bg-purple-100 text-purple-700'
                                             }`}>
                                             {patient.gender}
                                         </span>
@@ -347,109 +418,347 @@ const PatientDetail = () => {
                 </Card>
             </div>
 
-            {/* Medical Information */}
+            {/* Visit History Section */}
             <Card className="glass-card border-0 hover-lift transition-smooth">
                 <CardHeader>
-                    <div className="flex items-center gap-2">
-                        <div className="h-2 w-2 rounded-full bg-gradient-to-r from-teal-600 to-cyan-600" />
-                        <CardTitle className="flex items-center gap-2">
-                            <Stethoscope className="h-5 w-5 text-teal-600" />
-                            Medical Information
-                        </CardTitle>
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                            <div className="h-2 w-2 rounded-full bg-gradient-to-r from-blue-600 to-cyan-600" />
+                            <CardTitle className="flex items-center gap-2">
+                                <Activity className="h-5 w-5 text-blue-600" />
+                                Visit History
+                            </CardTitle>
+                        </div>
+                        <Button
+                            onClick={() => setShowVisitModal(true)}
+                            className="bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 border-0 shadow-lg hover-lift transition-smooth"
+                        >
+                            <Plus className="h-4 w-4 mr-2" />
+                            Add Visit
+                        </Button>
                     </div>
+                    <CardDescription>
+                        Track patient revisits and monitor treatment progress
+                    </CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <div className="space-y-6">
-                        {/* Case Taking */}
-                        <div className="space-y-2">
-                            <Label className="text-slate-700 font-medium flex items-center gap-1">
-                                <FileText className="h-4 w-4 text-teal-600" />
-                                Case Taking
-                            </Label>
-                            {editMode ? (
-                                <Textarea
-                                    name="caseTaking"
-                                    value={formData.caseTaking || ''}
-                                    onChange={handleChange}
-                                    rows={4}
-                                    className="glass border-white/40 focus:border-teal-400 focus:ring-teal-400 resize-none"
-                                />
-                            ) : (
-                                <div className="glass-card rounded-lg p-4">
-                                    <p className="text-slate-700 whitespace-pre-wrap">
-                                        {patient.caseTaking || 'Not provided'}
-                                    </p>
-                                </div>
-                            )}
+                    {visits.length === 0 ? (
+                        <div className="text-center py-12">
+                            <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-gradient-to-r from-blue-100 to-cyan-100 flex items-center justify-center">
+                                <Activity className="h-10 w-10 text-blue-600" />
+                            </div>
+                            <h3 className="text-lg font-semibold text-slate-700 mb-2">No Visits Recorded</h3>
+                            <p className="text-slate-600 mb-4">Start tracking patient visits to monitor treatment progress</p>
+                            <Button
+                                onClick={() => setShowVisitModal(true)}
+                                className="bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 border-0"
+                            >
+                                <Plus className="h-4 w-4 mr-2" />
+                                Add First Visit
+                            </Button>
                         </div>
-
-                        {/* Diagnosis */}
-                        <div className="space-y-2">
-                            <Label className="text-slate-700 font-medium flex items-center gap-1">
-                                <Stethoscope className="h-4 w-4 text-teal-600" />
-                                Diagnosis
-                            </Label>
-                            {editMode ? (
-                                <Textarea
-                                    name="diagnosis"
-                                    value={formData.diagnosis || ''}
-                                    onChange={handleChange}
-                                    rows={4}
-                                    className="glass border-white/40 focus:border-teal-400 focus:ring-teal-400 resize-none"
-                                />
-                            ) : (
-                                <div className="glass-card rounded-lg p-4">
-                                    <p className="text-slate-700 whitespace-pre-wrap">
-                                        {patient.diagnosis || 'Not provided'}
-                                    </p>
+                    ) : (
+                        <div className="space-y-4">
+                            {/* Visit Stats */}
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                                <div className="glass-card rounded-xl p-4 border-blue-200">
+                                    <div className="flex items-center gap-3">
+                                        <div className="p-2 rounded-lg bg-gradient-to-br from-blue-600 to-cyan-600">
+                                            <Activity className="h-5 w-5 text-white" />
+                                        </div>
+                                        <div>
+                                            <p className="text-xs text-slate-500">Total Visits</p>
+                                            <p className="text-2xl font-bold text-slate-700">{visits.length}</p>
+                                        </div>
+                                    </div>
                                 </div>
-                            )}
-                        </div>
-
-                        {/* Protocol */}
-                        <div className="space-y-2">
-                            <Label className="text-slate-700 font-medium flex items-center gap-1">
-                                <ClipboardList className="h-4 w-4 text-teal-600" />
-                                Treatment Protocol
-                            </Label>
-                            {editMode ? (
-                                <Textarea
-                                    name="protocol"
-                                    value={formData.protocol || ''}
-                                    onChange={handleChange}
-                                    rows={4}
-                                    className="glass border-white/40 focus:border-teal-400 focus:ring-teal-400 resize-none"
-                                />
-                            ) : (
-                                <div className="glass-card rounded-lg p-4">
-                                    <p className="text-slate-700 whitespace-pre-wrap">
-                                        {patient.protocol || 'Not provided'}
-                                    </p>
+                                <div className="glass-card rounded-xl p-4 border-green-200">
+                                    <div className="flex items-center gap-3">
+                                        <div className="p-2 rounded-lg bg-gradient-to-br from-green-600 to-teal-600">
+                                            <Calendar className="h-5 w-5 text-white" />
+                                        </div>
+                                        <div>
+                                            <p className="text-xs text-slate-500">First Visit</p>
+                                            <p className="text-sm font-semibold text-slate-700">
+                                                {new Date(patient.createdAt).toLocaleDateString('en-US', {
+                                                    month: 'short',
+                                                    day: 'numeric',
+                                                    year: 'numeric'
+                                                })}
+                                            </p>
+                                        </div>
+                                    </div>
                                 </div>
-                            )}
-                        </div>
-
-                        {/* Consent in Edit Mode */}
-                        {editMode && (
-                            <div className="glass-card rounded-xl p-4 border-teal-200">
-                                <div className="flex items-start space-x-3">
-                                    <input
-                                        type="checkbox"
-                                        id="consent"
-                                        name="consent"
-                                        checked={formData.consent}
-                                        onChange={handleChange}
-                                        className="h-5 w-5 rounded border-teal-300 text-teal-600 focus:ring-teal-500 mt-0.5"
-                                    />
-                                    <Label htmlFor="consent" className="cursor-pointer text-sm text-slate-700 leading-relaxed">
-                                        Patient has given informed consent for treatment
-                                    </Label>
+                                <div className="glass-card rounded-xl p-4 border-purple-200">
+                                    <div className="flex items-center gap-3">
+                                        <div className="p-2 rounded-lg bg-gradient-to-br from-purple-600 to-pink-600">
+                                            <TrendingUp className="h-5 w-5 text-white" />
+                                        </div>
+                                        <div>
+                                            <p className="text-xs text-slate-500">Latest Visit</p>
+                                            <p className="text-sm font-semibold text-slate-700">
+                                                {visits.length > 0 ? new Date(visits[0].visitDate).toLocaleDateString('en-US', {
+                                                    month: 'short',
+                                                    day: 'numeric',
+                                                    year: 'numeric'
+                                                }) : 'N/A'}
+                                            </p>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
-                        )}
-                    </div>
+
+                            {/* Timeline */}
+                            <div className="relative">
+                                {/* Timeline line */}
+                                <div className="absolute left-6 top-0 bottom-0 w-0.5 bg-gradient-to-b from-blue-600 via-purple-600 to-pink-600" />
+
+                                <div className="space-y-6">
+                                    {[...visits].sort((a, b) => new Date(b.visitDate) - new Date(a.visitDate)).map((visit, index, sortedVisits) => {
+                                        const previousVisit = sortedVisits[index + 1];
+                                        const gap = previousVisit ? calculateGap(visit.visitDate, previousVisit.visitDate) : null;
+
+                                        return (
+                                            <div key={visit._id} className="relative pl-16">
+                                                {/* Timeline dot */}
+                                                <div className="absolute left-3.5 top-6 w-5 h-5 rounded-full bg-gradient-to-br from-blue-600 to-purple-600 border-4 border-white shadow-lg z-10" />
+
+                                                {/* Gap indicator */}
+                                                {gap && (
+                                                    <div className="absolute left-14 -top-3 px-3 py-1 rounded-full bg-gradient-to-r from-orange-100 to-pink-100 border border-orange-200">
+                                                        <p className="text-xs font-semibold text-orange-700 flex items-center gap-1">
+                                                            <Clock className="h-3 w-3" />
+                                                            {gap} gap
+                                                        </p>
+                                                    </div>
+                                                )}
+
+                                                {/* Visit card */}
+                                                <div className="glass-card rounded-xl p-5 hover-lift transition-smooth border-blue-200">
+                                                    <div className="flex items-start justify-between mb-4">
+                                                        <div className="flex items-center gap-3">
+                                                            <div className="p-2 rounded-lg bg-gradient-to-br from-blue-600 to-cyan-600">
+                                                                <Calendar className="h-4 w-4 text-white" />
+                                                            </div>
+                                                            <div>
+                                                                <p className="font-semibold text-slate-700">
+                                                                    Visit #{visits.length - index}
+                                                                </p>
+                                                                <p className="text-sm text-slate-600">
+                                                                    {new Date(visit.visitDate).toLocaleDateString('en-US', {
+                                                                        weekday: 'long',
+                                                                        year: 'numeric',
+                                                                        month: 'long',
+                                                                        day: 'numeric'
+                                                                    })}
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                        <Button
+                                                            variant="outline"
+                                                            size="icon"
+                                                            onClick={() => handleDeleteVisit(visit._id)}
+                                                            className="glass hover:bg-red-50 hover:border-red-300 transition-smooth"
+                                                        >
+                                                            <Trash2 className="h-4 w-4 text-red-600" />
+                                                        </Button>
+                                                    </div>
+
+                                                    <div className="space-y-3">
+                                                        {visit.symptoms && (
+                                                            <div>
+                                                                <Label className="text-xs text-slate-500 flex items-center gap-1 mb-1">
+                                                                    <Activity className="h-3 w-3" />
+                                                                    {index === visits.length - 1 ? 'Case Taking / Initial Symptoms' : 'Symptoms'}
+                                                                </Label>
+                                                                <p className="text-sm text-slate-700 bg-white/50 rounded-lg p-2">
+                                                                    {visit.symptoms}
+                                                                </p>
+                                                            </div>
+                                                        )}
+                                                        {visit.diagnosis && (
+                                                            <div>
+                                                                <Label className="text-xs text-slate-500 flex items-center gap-1 mb-1">
+                                                                    <Stethoscope className="h-3 w-3" />
+                                                                    Diagnosis
+                                                                </Label>
+                                                                <p className="text-sm text-slate-700 bg-white/50 rounded-lg p-2">
+                                                                    {visit.diagnosis}
+                                                                </p>
+                                                            </div>
+                                                        )}
+                                                        {visit.protocol && (
+                                                            <div>
+                                                                <Label className="text-xs text-slate-500 flex items-center gap-1 mb-1">
+                                                                    <ClipboardList className="h-3 w-3" />
+                                                                    Treatment Protocol
+                                                                </Label>
+                                                                <p className="text-sm text-slate-700 bg-white/50 rounded-lg p-2">
+                                                                    {visit.protocol}
+                                                                </p>
+                                                            </div>
+                                                        )}
+                                                        {visit.notes && (
+                                                            <div>
+                                                                <Label className="text-xs text-slate-500 flex items-center gap-1 mb-1">
+                                                                    <FileText className="h-3 w-3" />
+                                                                    Notes
+                                                                </Label>
+                                                                <p className="text-sm text-slate-700 bg-white/50 rounded-lg p-2">
+                                                                    {visit.notes}
+                                                                </p>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </CardContent>
             </Card>
+
+            {/* Add Visit Modal */}
+            {showVisitModal && (
+                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                    <div className="glass-card rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+                        <div className="sticky top-0 glass-card rounded-t-2xl p-6 border-b border-white/20 z-10">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2 rounded-lg bg-gradient-to-br from-blue-600 to-cyan-600">
+                                        <Plus className="h-5 w-5 text-white" />
+                                    </div>
+                                    <div>
+                                        <h2 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">
+                                            Add New Visit
+                                        </h2>
+                                        <p className="text-sm text-slate-600">Record a new patient visit</p>
+                                    </div>
+                                </div>
+                                <Button
+                                    variant="outline"
+                                    size="icon"
+                                    onClick={() => setShowVisitModal(false)}
+                                    className="glass hover-lift transition-smooth"
+                                >
+                                    <X className="h-4 w-4" />
+                                </Button>
+                            </div>
+                        </div>
+
+                        <div className="p-6 space-y-6">
+                            {/* Visit Date */}
+                            <div className="space-y-2">
+                                <Label className="text-slate-700 font-medium flex items-center gap-1">
+                                    <Calendar className="h-4 w-4 text-blue-600" />
+                                    Visit Date
+                                </Label>
+                                <Input
+                                    type="date"
+                                    name="visitDate"
+                                    value={visitFormData.visitDate}
+                                    onChange={handleVisitFormChange}
+                                    className="glass border-white/40 focus:border-blue-400 focus:ring-blue-400 h-11"
+                                />
+                            </div>
+
+                            {/* Symptoms */}
+                            <div className="space-y-2">
+                                <Label className="text-slate-700 font-medium flex items-center gap-1">
+                                    <Activity className="h-4 w-4 text-blue-600" />
+                                    Symptoms
+                                </Label>
+                                <Textarea
+                                    name="symptoms"
+                                    value={visitFormData.symptoms}
+                                    onChange={handleVisitFormChange}
+                                    rows={3}
+                                    placeholder="Describe patient symptoms..."
+                                    className="glass border-white/40 focus:border-blue-400 focus:ring-blue-400 resize-none"
+                                />
+                            </div>
+
+                            {/* Diagnosis */}
+                            <div className="space-y-2">
+                                <Label className="text-slate-700 font-medium flex items-center gap-1">
+                                    <Stethoscope className="h-4 w-4 text-blue-600" />
+                                    Diagnosis
+                                </Label>
+                                <Textarea
+                                    name="diagnosis"
+                                    value={visitFormData.diagnosis}
+                                    onChange={handleVisitFormChange}
+                                    rows={3}
+                                    placeholder="Enter diagnosis..."
+                                    className="glass border-white/40 focus:border-blue-400 focus:ring-blue-400 resize-none"
+                                />
+                            </div>
+
+                            {/* Treatment Protocol */}
+                            <div className="space-y-2">
+                                <Label className="text-slate-700 font-medium flex items-center gap-1">
+                                    <ClipboardList className="h-4 w-4 text-blue-600" />
+                                    Treatment Protocol
+                                </Label>
+                                <Textarea
+                                    name="protocol"
+                                    value={visitFormData.protocol}
+                                    onChange={handleVisitFormChange}
+                                    rows={3}
+                                    placeholder="Enter treatment protocol..."
+                                    className="glass border-white/40 focus:border-blue-400 focus:ring-blue-400 resize-none"
+                                />
+                            </div>
+
+                            {/* Notes */}
+                            <div className="space-y-2">
+                                <Label className="text-slate-700 font-medium flex items-center gap-1">
+                                    <FileText className="h-4 w-4 text-blue-600" />
+                                    Additional Notes
+                                </Label>
+                                <Textarea
+                                    name="notes"
+                                    value={visitFormData.notes}
+                                    onChange={handleVisitFormChange}
+                                    rows={3}
+                                    placeholder="Any additional notes..."
+                                    className="glass border-white/40 focus:border-blue-400 focus:ring-blue-400 resize-none"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="sticky bottom-0 glass-card rounded-b-2xl p-6 border-t border-white/20 flex gap-3 justify-end">
+                            <Button
+                                variant="outline"
+                                onClick={() => setShowVisitModal(false)}
+                                className="glass hover-lift transition-smooth"
+                            >
+                                Cancel
+                            </Button>
+                            <Button
+                                onClick={handleAddVisit}
+                                disabled={saving}
+                                className="bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 border-0 shadow-lg hover-lift transition-smooth"
+                            >
+                                {saving ? (
+                                    <div className="flex items-center gap-2">
+                                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                                        <span>Saving...</span>
+                                    </div>
+                                ) : (
+                                    <>
+                                        <Save className="h-4 w-4 mr-2" />
+                                        Save Visit
+                                    </>
+                                )}
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

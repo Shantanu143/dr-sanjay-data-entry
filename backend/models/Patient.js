@@ -44,6 +44,34 @@ const patientSchema = new mongoose.Schema(
             required: [true, 'Patient consent is required'],
             default: false,
         },
+        visits: [
+            {
+                visitDate: {
+                    type: Date,
+                    default: Date.now,
+                },
+                notes: {
+                    type: String,
+                    trim: true,
+                },
+                diagnosis: {
+                    type: String,
+                    trim: true,
+                },
+                protocol: {
+                    type: String,
+                    trim: true,
+                },
+                symptoms: {
+                    type: String,
+                    trim: true,
+                },
+                createdBy: {
+                    type: mongoose.Schema.Types.ObjectId,
+                    ref: 'User',
+                },
+            },
+        ],
         createdBy: {
             type: mongoose.Schema.Types.ObjectId,
             ref: 'User',
