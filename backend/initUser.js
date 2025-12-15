@@ -7,13 +7,9 @@ const initializeUser = async () => {
         await mongoose.connect(process.env.MONGODB_URI);
         console.log('MongoDB Connected');
 
-        // Check if user already exists
-        const existingUser = await User.findOne({ email: 'dr.sanjay@gmail.com' });
-
-        if (existingUser) {
-            console.log('User already exists!');
-            process.exit(0);
-        }
+        // Delete all existing users to start fresh
+        await User.deleteMany({});
+        console.log('Deleted all existing users');
 
         // Create new user
         const user = await User.create({
@@ -21,9 +17,10 @@ const initializeUser = async () => {
             password: 'Dr.sanjay@123',
         });
 
-        console.log('User created successfully!');
-        console.log('Email:', user.email);
-        console.log('You can now login with these credentials.');
+        console.log('\n✅ User created successfully!');
+        console.log('📧 Email: dr.sanjay@gmail.com');
+        console.log('🔑 Password: test123');
+        console.log('\n💡 You can now login with these credentials.');
 
         process.exit(0);
     } catch (error) {

@@ -148,11 +148,11 @@ const Login = () => {
                             <div className="space-y-2 text-xs text-slate-600">
                                 <div className="flex items-center justify-between glass-card rounded-lg p-2">
                                     <span className="text-slate-500">Email:</span>
-                                    <span className="font-mono font-semibold text-purple-600">test@test.com</span>
+                                    <span className="font-mono font-semibold text-purple-600">dr.sanjay@gmail.com</span>
                                 </div>
                                 <div className="flex items-center justify-between glass-card rounded-lg p-2">
                                     <span className="text-slate-500">Password:</span>
-                                    <span className="font-mono font-semibold text-purple-600">test123</span>
+                                    <span className="font-mono font-semibold text-purple-600">Dr.sanjay@123</span>
                                 </div>
                             </div>
                         </div>
