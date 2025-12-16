@@ -22,9 +22,9 @@ import api from '../lib/api';
 import { COLORS } from '../constants';
 import { theme, commonStyles } from '../styles/theme';
 
-const RecordRevisitScreen = ({ navigation }) => {
+const RecordRevisitScreen = ({ navigation, route }) => {
     const [patients, setPatients] = useState([]);
-    const [selectedPatient, setSelectedPatient] = useState(null);
+    const [selectedPatient, setSelectedPatient] = useState(route.params?.patient || null);
     const [searchQuery, setSearchQuery] = useState('');
     const [loading, setLoading] = useState(false);
     const [visitData, setVisitData] = useState({
@@ -36,8 +36,11 @@ const RecordRevisitScreen = ({ navigation }) => {
     });
 
     useEffect(() => {
+        if (route.params?.patient) {
+            setSelectedPatient(route.params.patient);
+        }
         fetchPatients();
-    }, []);
+    }, [route.params?.patient]);
 
     const fetchPatients = async () => {
         try {

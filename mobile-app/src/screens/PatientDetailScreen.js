@@ -7,10 +7,23 @@ import {
     RefreshControl,
     TouchableOpacity,
     Alert,
+    Animated,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ArrowLeft, User, Phone, MapPin, Calendar, Plus } from 'lucide-react-native';
+import {
+    ArrowLeft,
+    User,
+    Phone,
+    MapPin,
+    Calendar,
+    Plus,
+    Activity,
+    TrendingUp,
+    Clock,
+    Mail,
+    Cake
+} from 'lucide-react-native';
 import GlassCard from '../components/GlassCard';
 import VisitCard from '../components/VisitCard';
 import GradientButton from '../components/GradientButton';
@@ -23,6 +36,7 @@ const PatientDetailScreen = ({ route, navigation }) => {
     const [patient, setPatient] = useState(null);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
+    const scrollY = new Animated.Value(0);
 
     useEffect(() => {
         fetchPatientDetails();
@@ -66,10 +80,21 @@ const PatientDetailScreen = ({ route, navigation }) => {
         }
     };
 
+    const getAvatarGradient = (name) => {
+        const gradients = [
+            COLORS.gradient.purplePink,
+            COLORS.gradient.blueCyan,
+            COLORS.gradient.greenTeal,
+        ];
+        const index = (name?.charCodeAt(0) || 0) % gradients.length;
+        return gradients[index];
+    };
+
     if (loading || !patient) {
         return (
             <View style={[commonStyles.container, commonStyles.center]}>
-                <Text>Loading...</Text>
+                <Activity size={40} color={COLORS.primary.purple} />
+                <Text style={styles.loadingText}>Loading patient details...</Text>
             </View>
         );
     }
@@ -79,186 +104,385 @@ const PatientDetailScreen = ({ route, navigation }) => {
         new Date(b.visitDate) - new Date(a.visitDate)
     );
 
+    const headerOpacity = scrollY.interpolate({
+        inputRange: [0, 100],
+        outputRange: [0, 1],
+        extrapolate: 'clamp',
+    });
+
     return (
         <View style={commonStyles.container}>
-            <LinearGradient
-                colors={COLORS.gradient.purplePink}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.header}
-            >
+            {/* Animated Header */}
+            <Animated.View style={[styles.headerWrapper, { opacity: headerOpacity }]}>
+                <LinearGradient
+                    colors={COLORS.gradient.purplePink}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.animatedHeader}
+                >
+                    <SafeAreaView edges={['top']}>
+                        <View style={styles.headerContent}>
+                            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+                                <ArrowLeft size={24} color={COLORS.white} />
+                            </TouchableOpacity>
+                            <Text style={styles.headerTitle} numberOfLines={1}>{patient.name}</Text>
+                            <View style={{ width: 40 }} />
+                        </View>
+                    </SafeAreaView>
+                </LinearGradient>
+            </Animated.View>
+
+            {/* Fixed Header with Back Button */}
+            <View style={styles.fixedHeader}>
                 <SafeAreaView edges={['top']}>
                     <View style={styles.headerContent}>
-                        <TouchableOpacity onPress={() => navigation.goBack()}>
-                            <ArrowLeft size={24} color={COLORS.white} />
+                        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+                            <View style={styles.backButtonCircle}>
+                                <ArrowLeft size={20} color={COLORS.slate[800]} />
+                            </View>
                         </TouchableOpacity>
-                        <Text style={styles.headerTitle}>Patient Details</Text>
-                        <View style={{ width: 24 }} />
                     </View>
                 </SafeAreaView>
-            </LinearGradient>
+            </View>
 
-            <ScrollView
+            <Animated.ScrollView
                 style={commonStyles.scrollView}
                 contentContainerStyle={styles.scrollContent}
                 refreshControl={
                     <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
                 }
+                onScroll={Animated.event(
+                    [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+                    { useNativeDriver: true }
+                )}
+                scrollEventThrottle={16}
             >
-                {/* Patient Info Card */}
-                <GlassCard style={styles.card}>
-                    <View style={styles.avatarContainer}>
-                        <View style={styles.avatar}>
-                            <Text style={styles.avatarText}>{patient.name.charAt(0).toUpperCase()}</Text>
+                {/* Hero Section with Gradient Avatar */}
+                <LinearGradient
+                    colors={getAvatarGradient(patient.name)}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.heroSection}
+                >
+                    <View style={styles.avatarWrapper}>
+                        <View style={styles.avatarOuter}>
+                            <View style={styles.avatar}>
+                                <Text style={styles.avatarText}>{patient.name.charAt(0).toUpperCase()}</Text>
+                            </View>
                         </View>
                     </View>
                     <Text style={styles.patientName}>{patient.name}</Text>
-
-                    <View style={styles.infoRow}>
-                        <User size={16} color={COLORS.slate[600]} />
-                        <Text style={styles.infoText}>Age: {patient.age} • {patient.gender}</Text>
+                    <View style={styles.quickInfoRow}>
+                        <View style={styles.quickInfoBadge}>
+                            <Cake size={14} color={COLORS.white} />
+                            <Text style={styles.quickInfoText}>{patient.age} years</Text>
+                        </View>
+                        <View style={styles.quickInfoBadge}>
+                            <User size={14} color={COLORS.white} />
+                            <Text style={styles.quickInfoText}>{patient.gender}</Text>
+                        </View>
                     </View>
+                </LinearGradient>
 
-                    <View style={styles.infoRow}>
-                        <Phone size={16} color={COLORS.slate[600]} />
-                        <Text style={styles.infoText}>{patient.phoneNo}</Text>
+                {/* Contact Information Card */}
+                <GlassCard style={styles.contactCard}>
+                    <Text style={styles.cardTitle}>Contact Information</Text>
+
+                    <View style={styles.contactRow}>
+                        <View style={[styles.iconCircle, { backgroundColor: 'rgba(59, 130, 246, 0.1)' }]}>
+                            <Phone size={18} color={COLORS.primary.blue} />
+                        </View>
+                        <View style={styles.contactInfo}>
+                            <Text style={styles.contactLabel}>Phone Number</Text>
+                            <Text style={styles.contactValue}>{patient.phoneNo}</Text>
+                        </View>
                     </View>
 
                     {patient.address && (
-                        <View style={styles.infoRow}>
-                            <MapPin size={16} color={COLORS.slate[600]} />
-                            <Text style={styles.infoText}>{patient.address}</Text>
+                        <View style={styles.contactRow}>
+                            <View style={[styles.iconCircle, { backgroundColor: 'rgba(16, 185, 129, 0.1)' }]}>
+                                <MapPin size={18} color={COLORS.primary.green} />
+                            </View>
+                            <View style={styles.contactInfo}>
+                                <Text style={styles.contactLabel}>Address</Text>
+                                <Text style={styles.contactValue}>{patient.address}</Text>
+                            </View>
                         </View>
                     )}
                 </GlassCard>
 
-                {/* Visit Statistics */}
-                <View style={styles.statsRow}>
-                    <GlassCard style={styles.statCard}>
-                        <Text style={styles.statValue}>{visits.length}</Text>
-                        <Text style={styles.statLabel}>Total Visits</Text>
-                    </GlassCard>
-                    <GlassCard style={styles.statCard}>
-                        <Text style={styles.statValue}>
-                            {visits.length > 0 ? new Date(visits[visits.length - 1].visitDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '-'}
-                        </Text>
-                        <Text style={styles.statLabel}>First Visit</Text>
-                    </GlassCard>
-                    <GlassCard style={styles.statCard}>
-                        <Text style={styles.statValue}>
-                            {visits.length > 0 ? new Date(visits[0].visitDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '-'}
-                        </Text>
-                        <Text style={styles.statLabel}>Latest Visit</Text>
-                    </GlassCard>
+                {/* Visit Statistics - Enhanced */}
+                <View style={styles.statsSection}>
+                    <Text style={styles.sectionTitle}>Visit Overview</Text>
+                    <View style={styles.statsGrid}>
+                        <GlassCard style={styles.statCard}>
+                            <LinearGradient
+                                colors={['rgba(147, 51, 234, 0.1)', 'rgba(236, 72, 153, 0.1)']}
+                                style={styles.statIconWrapper}
+                            >
+                                <Activity size={24} color={COLORS.primary.purple} />
+                            </LinearGradient>
+                            <Text style={styles.statValue}>{visits.length}</Text>
+                            <Text style={styles.statLabel}>Total Visits</Text>
+                        </GlassCard>
+
+                        <GlassCard style={styles.statCard}>
+                            <LinearGradient
+                                colors={['rgba(59, 130, 246, 0.1)', 'rgba(6, 182, 212, 0.1)']}
+                                style={styles.statIconWrapper}
+                            >
+                                <Calendar size={24} color={COLORS.primary.blue} />
+                            </LinearGradient>
+                            <Text style={styles.statValue}>
+                                {visits.length > 0 ? new Date(visits[visits.length - 1].visitDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '-'}
+                            </Text>
+                            <Text style={styles.statLabel}>First Visit</Text>
+                        </GlassCard>
+
+                        <GlassCard style={styles.statCard}>
+                            <LinearGradient
+                                colors={['rgba(16, 185, 129, 0.1)', 'rgba(20, 184, 166, 0.1)']}
+                                style={styles.statIconWrapper}
+                            >
+                                <Clock size={24} color={COLORS.primary.green} />
+                            </LinearGradient>
+                            <Text style={styles.statValue}>
+                                {visits.length > 0 ? new Date(visits[0].visitDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '-'}
+                            </Text>
+                            <Text style={styles.statLabel}>Latest Visit</Text>
+                        </GlassCard>
+                    </View>
                 </View>
 
-                {/* Add Visit Button */}
-                <GradientButton
-                    title="Add Visit"
-                    icon={<Plus size={20} color="white" />}
-                    onPress={() => {
-                        // Navigate to add visit (could be a modal or new screen)
-                        Alert.alert('Add Visit', 'This would open add visit form');
-                    }}
-                    colors={COLORS.gradient.blueCyan}
-                    style={styles.addButton}
-                />
-
-                {/* Visit History */}
+                {/* Visit History with Timeline */}
                 <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Visit History</Text>
+                    <View style={styles.sectionHeader}>
+                        <Text style={styles.sectionTitle}>Medical History</Text>
+                        <View style={styles.visitCountBadge}>
+                            <Text style={styles.visitCountText}>{visits.length} visits</Text>
+                        </View>
+                    </View>
 
                     {sortedVisits.length === 0 ? (
-                        <Text style={styles.emptyText}>No visits recorded yet</Text>
+                        <GlassCard style={styles.emptyCard}>
+                            <TrendingUp size={48} color={COLORS.slate[300]} />
+                            <Text style={styles.emptyTitle}>No visits recorded yet</Text>
+                            <Text style={styles.emptySubtext}>Start tracking patient visits by adding the first visit</Text>
+                        </GlassCard>
                     ) : (
-                        sortedVisits.map((visit, index) => {
-                            const previousVisit = sortedVisits[index + 1];
-                            const gap = previousVisit ? calculateGap(visit.visitDate, previousVisit.visitDate) : null;
+                        <View style={styles.timelineContainer}>
+                            {sortedVisits.map((visit, index) => {
+                                const previousVisit = sortedVisits[index + 1];
+                                const gap = previousVisit ? calculateGap(visit.visitDate, previousVisit.visitDate) : null;
 
-                            return (
-                                <View key={visit._id}>
-                                    {gap && (
-                                        <View style={styles.gapIndicator}>
-                                            <View style={styles.gapLine} />
-                                            <Text style={styles.gapText}>{gap} gap</Text>
-                                            <View style={styles.gapLine} />
-                                        </View>
-                                    )}
-                                    <VisitCard
-                                        visit={visit}
-                                        visitNumber={visits.length - index}
-                                        isFirst={index === sortedVisits.length - 1}
-                                        onDelete={handleDeleteVisit}
-                                    />
-                                </View>
-                            );
-                        })
+                                return (
+                                    <View key={visit._id} style={styles.timelineItem}>
+                                        {gap && (
+                                            <View style={styles.gapIndicator}>
+                                                <View style={styles.gapLine} />
+                                                <View style={styles.gapBadge}>
+                                                    <Clock size={12} color={COLORS.slate[500]} />
+                                                    <Text style={styles.gapText}>{gap} gap</Text>
+                                                </View>
+                                                <View style={styles.gapLine} />
+                                            </View>
+                                        )}
+                                        <VisitCard
+                                            visit={visit}
+                                            visitNumber={visits.length - index}
+                                            isFirst={index === sortedVisits.length - 1}
+                                            onDelete={handleDeleteVisit}
+                                        />
+                                    </View>
+                                );
+                            })}
+                        </View>
                     )}
                 </View>
-            </ScrollView>
+
+                {/* Bottom padding for scrolling past the sticky button */}
+                <View style={{ height: 120 }} />
+            </Animated.ScrollView>
+
+            {/* Floating Action Button */}
+            <View style={styles.fabContainer}>
+                <TouchableOpacity
+                    activeOpacity={0.9}
+                    onPress={() => navigation.navigate('RecordRevisit', { patient })}
+                    style={styles.fab}
+                >
+                    <LinearGradient
+                        colors={COLORS.gradient.blueCyan}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                        style={styles.fabGradient}
+                    >
+                        <Plus size={28} color={COLORS.white} />
+                        <Text style={styles.fabText}>Add Visit</Text>
+                    </LinearGradient>
+                </TouchableOpacity>
+            </View>
         </View>
     );
 };
 
 const styles = StyleSheet.create({
-    header: {
-        paddingBottom: theme.spacing.lg,
+    headerWrapper: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        zIndex: 10,
+    },
+    animatedHeader: {
+        paddingBottom: theme.spacing.md,
+    },
+    fixedHeader: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        zIndex: 11,
     },
     headerContent: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
         paddingHorizontal: theme.spacing.lg,
-        paddingTop: theme.spacing.md,
+        paddingTop: theme.spacing.sm,
     },
-    headerTitle: {
-        fontSize: theme.fontSize.xl,
-        fontWeight: theme.fontWeight.bold,
-        color: COLORS.white,
+    backButton: {
+        padding: theme.spacing.xs,
     },
-    scrollContent: {
-        padding: theme.spacing.lg,
-    },
-    card: {
-        padding: theme.spacing.lg,
-        marginBottom: theme.spacing.lg,
-        alignItems: 'center',
-    },
-    avatarContainer: {
-        marginBottom: theme.spacing.md,
-    },
-    avatar: {
-        width: 80,
-        height: 80,
-        borderRadius: 40,
-        backgroundColor: COLORS.primary.purple,
+    backButtonCircle: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: 'rgba(255, 255, 255, 0.9)',
         alignItems: 'center',
         justifyContent: 'center',
+        ...theme.shadows.md,
+    },
+    headerTitle: {
+        flex: 1,
+        fontSize: theme.fontSize.lg,
+        fontWeight: theme.fontWeight.bold,
+        color: COLORS.white,
+        textAlign: 'center',
+    },
+    scrollContent: {
+        paddingTop: 0,
+    },
+    loadingText: {
+        marginTop: theme.spacing.md,
+        fontSize: theme.fontSize.md,
+        color: COLORS.slate[600],
+    },
+    heroSection: {
+        paddingTop: 80,
+        paddingBottom: theme.spacing.xl,
+        alignItems: 'center',
+        borderBottomLeftRadius: 30,
+        borderBottomRightRadius: 30,
+        marginBottom: theme.spacing.lg,
+    },
+    avatarWrapper: {
+        marginBottom: theme.spacing.md,
+    },
+    avatarOuter: {
+        width: 110,
+        height: 110,
+        borderRadius: 55,
+        backgroundColor: 'rgba(255, 255, 255, 0.3)',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 5,
+    },
+    avatar: {
+        width: 100,
+        height: 100,
+        borderRadius: 50,
+        backgroundColor: 'rgba(255, 255, 255, 0.95)',
+        alignItems: 'center',
+        justifyContent: 'center',
+        ...theme.shadows.lg,
     },
     avatarText: {
-        color: COLORS.white,
-        fontSize: 32,
+        color: COLORS.primary.purple,
+        fontSize: 42,
         fontWeight: theme.fontWeight.bold,
     },
     patientName: {
-        fontSize: theme.fontSize.xxl,
+        fontSize: 28,
+        fontWeight: theme.fontWeight.bold,
+        color: COLORS.white,
+        marginBottom: theme.spacing.sm,
+        textAlign: 'center',
+        paddingHorizontal: theme.spacing.lg,
+    },
+    quickInfoRow: {
+        flexDirection: 'row',
+        gap: theme.spacing.sm,
+    },
+    quickInfoBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: 'rgba(255, 255, 255, 0.25)',
+        paddingHorizontal: theme.spacing.md,
+        paddingVertical: theme.spacing.xs,
+        borderRadius: theme.borderRadius.full,
+        gap: theme.spacing.xs,
+    },
+    quickInfoText: {
+        color: COLORS.white,
+        fontSize: theme.fontSize.sm,
+        fontWeight: theme.fontWeight.semibold,
+    },
+    contactCard: {
+        marginHorizontal: theme.spacing.lg,
+        marginBottom: theme.spacing.lg,
+        padding: theme.spacing.lg,
+    },
+    cardTitle: {
+        fontSize: theme.fontSize.md,
         fontWeight: theme.fontWeight.bold,
         color: COLORS.slate[800],
         marginBottom: theme.spacing.md,
     },
-    infoRow: {
+    contactRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginBottom: theme.spacing.sm,
-        gap: theme.spacing.sm,
+        marginBottom: theme.spacing.md,
     },
-    infoText: {
+    iconCircle: {
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginRight: theme.spacing.md,
+    },
+    contactInfo: {
+        flex: 1,
+    },
+    contactLabel: {
+        fontSize: theme.fontSize.xs,
+        color: COLORS.slate[500],
+        marginBottom: 2,
+        textTransform: 'uppercase',
+        letterSpacing: 0.5,
+    },
+    contactValue: {
         fontSize: theme.fontSize.md,
-        color: COLORS.slate[600],
+        color: COLORS.slate[800],
+        fontWeight: theme.fontWeight.medium,
     },
-    statsRow: {
-        flexDirection: 'row',
+    statsSection: {
+        marginHorizontal: theme.spacing.lg,
         marginBottom: theme.spacing.lg,
+    },
+    statsGrid: {
+        flexDirection: 'row',
         gap: theme.spacing.sm,
     },
     statCard: {
@@ -266,28 +490,56 @@ const styles = StyleSheet.create({
         padding: theme.spacing.md,
         alignItems: 'center',
     },
+    statIconWrapper: {
+        width: 48,
+        height: 48,
+        borderRadius: 24,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: theme.spacing.sm,
+    },
     statValue: {
-        fontSize: theme.fontSize.xl,
+        fontSize: theme.fontSize.lg,
         fontWeight: theme.fontWeight.bold,
         color: COLORS.slate[800],
-        marginBottom: theme.spacing.xs,
+        marginBottom: 2,
     },
     statLabel: {
         fontSize: theme.fontSize.xs,
         color: COLORS.slate[600],
         textAlign: 'center',
     },
-    addButton: {
+    section: {
+        marginHorizontal: theme.spacing.lg,
         marginBottom: theme.spacing.lg,
     },
-    section: {
-        marginBottom: theme.spacing.lg,
+    sectionHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        marginBottom: theme.spacing.md,
     },
     sectionTitle: {
         fontSize: theme.fontSize.lg,
         fontWeight: theme.fontWeight.bold,
         color: COLORS.slate[800],
-        marginBottom: theme.spacing.md,
+    },
+    visitCountBadge: {
+        backgroundColor: COLORS.primary.purple,
+        paddingHorizontal: theme.spacing.sm,
+        paddingVertical: 4,
+        borderRadius: theme.borderRadius.full,
+    },
+    visitCountText: {
+        color: COLORS.white,
+        fontSize: theme.fontSize.xs,
+        fontWeight: theme.fontWeight.semibold,
+    },
+    timelineContainer: {
+        position: 'relative',
+    },
+    timelineItem: {
+        position: 'relative',
     },
     gapIndicator: {
         flexDirection: 'row',
@@ -297,19 +549,64 @@ const styles = StyleSheet.create({
     gapLine: {
         flex: 1,
         height: 1,
-        backgroundColor: COLORS.slate[300],
+        backgroundColor: COLORS.slate[200],
+    },
+    gapBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: COLORS.slate[100],
+        paddingHorizontal: theme.spacing.sm,
+        paddingVertical: 4,
+        borderRadius: theme.borderRadius.full,
+        gap: 4,
+        marginHorizontal: theme.spacing.sm,
     },
     gapText: {
+        fontSize: theme.fontSize.xs,
+        color: COLORS.slate[600],
+        fontWeight: theme.fontWeight.medium,
+    },
+    emptyCard: {
+        padding: theme.spacing.xxl,
+        alignItems: 'center',
+    },
+    emptyTitle: {
+        fontSize: theme.fontSize.lg,
+        fontWeight: theme.fontWeight.semibold,
+        color: COLORS.slate[700],
+        marginTop: theme.spacing.md,
+        marginBottom: theme.spacing.xs,
+    },
+    emptySubtext: {
         fontSize: theme.fontSize.sm,
         color: COLORS.slate[500],
-        marginHorizontal: theme.spacing.md,
-        fontStyle: 'italic',
-    },
-    emptyText: {
         textAlign: 'center',
-        color: COLORS.slate[500],
-        fontSize: theme.fontSize.md,
-        paddingVertical: theme.spacing.xl,
+        lineHeight: 20,
+    },
+    fabContainer: {
+        position: 'absolute',
+        bottom: theme.spacing.xl,
+        right: theme.spacing.lg,
+        left: theme.spacing.lg,
+    },
+    fab: {
+        borderRadius: theme.borderRadius.full,
+        overflow: 'hidden',
+        ...theme.shadows.lg,
+        elevation: 8,
+    },
+    fabGradient: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: theme.spacing.md,
+        paddingHorizontal: theme.spacing.xl,
+        gap: theme.spacing.sm,
+    },
+    fabText: {
+        color: COLORS.white,
+        fontSize: theme.fontSize.lg,
+        fontWeight: theme.fontWeight.bold,
     },
 });
 

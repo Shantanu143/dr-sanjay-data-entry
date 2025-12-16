@@ -39,7 +39,9 @@ export const AuthProvider = ({ children }) => {
     const login = async (email, password) => {
         try {
             const response = await api.post('/auth/login', { email, password });
-            const { token, user: userData } = response.data;
+
+            // The backend returns { _id, email, token } directly, not wrapped in a user object
+            const { token, ...userData } = response.data;
 
             await AsyncStorage.setItem(TOKEN_KEY, token);
             await AsyncStorage.setItem(USER_KEY, JSON.stringify(userData));
@@ -47,6 +49,7 @@ export const AuthProvider = ({ children }) => {
             setUser(userData);
             return { success: true };
         } catch (error) {
+            console.error('Login error:', error);
             return {
                 success: false,
                 message: error.response?.data?.message || 'Login failed',

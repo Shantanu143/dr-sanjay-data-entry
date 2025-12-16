@@ -13,12 +13,6 @@ import AppNavigator from './src/navigation/AppNavigator';
  * - AuthProvider for authentication context
  * - AppNavigator for navigation
  * - StatusBar configuration
- * 
- * TODO:
- * 1. Create AppNavigator component
- * 2. Test on both iOS and Android
- * 3. Add error boundary
- * 4. Add loading screen while checking auth
  */
 export default function App() {
   return (
