@@ -9,7 +9,7 @@ import api from '../lib/api';
 import {
     UserPlus, User, Phone, Calendar, MapPin, FileText, Stethoscope,
     ClipboardList, CheckCircle, XCircle, Sparkles, ArrowLeft, Activity,
-    Users, RefreshCw, Search
+    Users, RefreshCw, Search, DollarSign, CreditCard, Wallet, Banknote
 } from 'lucide-react';
 
 const AddPatient = () => {
@@ -32,6 +32,12 @@ const AddPatient = () => {
         diagnosis: '',
         protocol: '',
         consent: false,
+        payment: {
+            doctorFees: '',
+            status: 'Unpaid',
+            method: 'Not Paid',
+            transactionId: '',
+        },
     });
 
     const [visitData, setVisitData] = useState({
@@ -40,6 +46,12 @@ const AddPatient = () => {
         diagnosis: '',
         protocol: '',
         notes: '',
+        payment: {
+            doctorFees: '',
+            status: 'Unpaid',
+            method: 'Not Paid',
+            transactionId: '',
+        },
     });
 
 
@@ -60,18 +72,40 @@ const AddPatient = () => {
 
     const handleChange = (e) => {
         const { name, value, type, checked } = e.target;
-        setFormData((prev) => ({
-            ...prev,
-            [name]: type === 'checkbox' ? checked : value,
-        }));
+        if (name.startsWith('payment.')) {
+            const paymentField = name.split('.')[1];
+            setFormData((prev) => ({
+                ...prev,
+                payment: {
+                    ...prev.payment,
+                    [paymentField]: value,
+                },
+            }));
+        } else {
+            setFormData((prev) => ({
+                ...prev,
+                [name]: type === 'checkbox' ? checked : value,
+            }));
+        }
     };
 
     const handleVisitChange = (e) => {
         const { name, value } = e.target;
-        setVisitData((prev) => ({
-            ...prev,
-            [name]: value,
-        }));
+        if (name.startsWith('payment.')) {
+            const paymentField = name.split('.')[1];
+            setVisitData((prev) => ({
+                ...prev,
+                payment: {
+                    ...prev.payment,
+                    [paymentField]: value,
+                },
+            }));
+        } else {
+            setVisitData((prev) => ({
+                ...prev,
+                [name]: value,
+            }));
+        }
     };
 
     const handleSubmit = async (e) => {
@@ -401,6 +435,84 @@ const AddPatient = () => {
                                     />
                                 </div>
 
+                                {/* Payment Information Section */}
+                                <div className="space-y-4">
+                                    <div className="flex items-center gap-2 pb-2 border-b border-slate-200">
+                                        <DollarSign className="h-5 w-5 text-green-600" />
+                                        <h3 className="font-semibold text-slate-700">Payment Information</h3>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div className="space-y-2">
+                                            <Label htmlFor="visitDoctorFees" className="text-slate-700 font-medium flex items-center gap-1">
+                                                <Banknote className="h-4 w-4 text-green-600" />
+                                                Doctor Fees (₹)
+                                            </Label>
+                                            <Input
+                                                id="visitDoctorFees"
+                                                name="payment.doctorFees"
+                                                type="number"
+                                                min="0"
+                                                value={visitData.payment.doctorFees}
+                                                onChange={handleVisitChange}
+                                                placeholder="Enter amount"
+                                                className="glass border-white/40 focus:border-green-400 focus:ring-green-400 h-11"
+                                            />
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <Label htmlFor="visitPaymentStatus" className="text-slate-700 font-medium flex items-center gap-1">
+                                                <CheckCircle className="h-4 w-4 text-green-600" />
+                                                Payment Status
+                                            </Label>
+                                            <select
+                                                id="visitPaymentStatus"
+                                                name="payment.status"
+                                                value={visitData.payment.status}
+                                                onChange={handleVisitChange}
+                                                className="flex h-11 w-full rounded-lg glass border-white/40 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-green-400 transition-all"
+                                            >
+                                                <option value="Unpaid">Unpaid</option>
+                                                <option value="Paid">Paid</option>
+                                            </select>
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <Label htmlFor="visitPaymentMethod" className="text-slate-700 font-medium flex items-center gap-1">
+                                                <CreditCard className="h-4 w-4 text-green-600" />
+                                                Payment Method
+                                            </Label>
+                                            <select
+                                                id="visitPaymentMethod"
+                                                name="payment.method"
+                                                value={visitData.payment.method}
+                                                onChange={handleVisitChange}
+                                                className="flex h-11 w-full rounded-lg glass border-white/40 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-green-400 transition-all"
+                                            >
+                                                <option value="Not Paid">Not Paid</option>
+                                                <option value="UPI">UPI</option>
+                                                <option value="Card">Card</option>
+                                                <option value="Cash">Cash</option>
+                                            </select>
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <Label htmlFor="visitTransactionId" className="text-slate-700 font-medium flex items-center gap-1">
+                                                <Wallet className="h-4 w-4 text-green-600" />
+                                                Transaction ID (Optional)
+                                            </Label>
+                                            <Input
+                                                id="visitTransactionId"
+                                                name="payment.transactionId"
+                                                value={visitData.payment.transactionId}
+                                                onChange={handleVisitChange}
+                                                placeholder="Enter transaction ID"
+                                                className="glass border-white/40 focus:border-green-400 focus:ring-green-400 h-11"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+
                                 {/* Error Message */}
                                 {error && (
                                     <div className="rounded-xl glass-card border-red-200 p-4 animate-in slide-in-from-top">
@@ -647,6 +759,84 @@ const AddPatient = () => {
                                     rows={4}
                                     className="glass border-white/40 focus:border-teal-400 focus:ring-teal-400 resize-none"
                                 />
+                            </div>
+                        </div>
+
+                        {/* Payment Information Section */}
+                        <div className="space-y-4">
+                            <div className="flex items-center gap-2 pb-2 border-b border-slate-200">
+                                <DollarSign className="h-5 w-5 text-green-600" />
+                                <h3 className="font-semibold text-slate-700">Payment Information</h3>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="doctorFees" className="text-slate-700 font-medium flex items-center gap-1">
+                                        <Banknote className="h-4 w-4 text-green-600" />
+                                        Doctor Fees (₹)
+                                    </Label>
+                                    <Input
+                                        id="doctorFees"
+                                        name="payment.doctorFees"
+                                        type="number"
+                                        min="0"
+                                        value={formData.payment.doctorFees}
+                                        onChange={handleChange}
+                                        placeholder="Enter amount"
+                                        className="glass border-white/40 focus:border-green-400 focus:ring-green-400 h-11"
+                                    />
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label htmlFor="paymentStatus" className="text-slate-700 font-medium flex items-center gap-1">
+                                        <CheckCircle className="h-4 w-4 text-green-600" />
+                                        Payment Status
+                                    </Label>
+                                    <select
+                                        id="paymentStatus"
+                                        name="payment.status"
+                                        value={formData.payment.status}
+                                        onChange={handleChange}
+                                        className="flex h-11 w-full rounded-lg glass border-white/40 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-green-400 transition-all"
+                                    >
+                                        <option value="Unpaid">Unpaid</option>
+                                        <option value="Paid">Paid</option>
+                                    </select>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label htmlFor="paymentMethod" className="text-slate-700 font-medium flex items-center gap-1">
+                                        <CreditCard className="h-4 w-4 text-green-600" />
+                                        Payment Method
+                                    </Label>
+                                    <select
+                                        id="paymentMethod"
+                                        name="payment.method"
+                                        value={formData.payment.method}
+                                        onChange={handleChange}
+                                        className="flex h-11 w-full rounded-lg glass border-white/40 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-green-400 transition-all"
+                                    >
+                                        <option value="Not Paid">Not Paid</option>
+                                        <option value="UPI">UPI</option>
+                                        <option value="Card">Card</option>
+                                        <option value="Cash">Cash</option>
+                                    </select>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label htmlFor="transactionId" className="text-slate-700 font-medium flex items-center gap-1">
+                                        <Wallet className="h-4 w-4 text-green-600" />
+                                        Transaction ID (Optional)
+                                    </Label>
+                                    <Input
+                                        id="transactionId"
+                                        name="payment.transactionId"
+                                        value={formData.payment.transactionId}
+                                        onChange={handleChange}
+                                        placeholder="Enter transaction ID"
+                                        className="glass border-white/40 focus:border-green-400 focus:ring-green-400 h-11"
+                                    />
+                                </div>
                             </div>
                         </div>
 

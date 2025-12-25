@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ArrowLeft, Calendar as CalendarIcon, Activity, Stethoscope, ClipboardList, FileText } from 'lucide-react-native';
+import { ArrowLeft, Calendar as CalendarIcon, Activity, Stethoscope, ClipboardList, FileText, DollarSign, CreditCard, Banknote } from 'lucide-react-native';
 import GlassCard from '../components/GlassCard';
 import GradientButton from '../components/GradientButton';
 import SearchBar from '../components/SearchBar';
@@ -33,6 +33,12 @@ const RecordRevisitScreen = ({ navigation, route }) => {
         diagnosis: '',
         protocol: '',
         notes: '',
+        payment: {
+            doctorFees: '',
+            status: 'Unpaid',
+            method: 'Not Paid',
+            transactionId: '',
+        },
     });
 
     useEffect(() => {
@@ -58,7 +64,18 @@ const RecordRevisitScreen = ({ navigation, route }) => {
     );
 
     const handleVisitChange = (field, value) => {
-        setVisitData({ ...visitData, [field]: value });
+        if (field.startsWith('payment.')) {
+            const paymentField = field.split('.')[1];
+            setVisitData({
+                ...visitData,
+                payment: {
+                    ...visitData.payment,
+                    [paymentField]: value,
+                },
+            });
+        } else {
+            setVisitData({ ...visitData, [field]: value });
+        }
     };
 
     const handleSubmit = async () => {
@@ -234,6 +251,118 @@ const RecordRevisitScreen = ({ navigation, route }) => {
                             </View>
                         </GlassCard>
 
+                        {/* Payment Information Card */}
+                        <GlassCard style={styles.card}>
+                            <View style={styles.cardHeader}>
+                                <Text style={styles.sectionTitle}>Payment Information</Text>
+                            </View>
+
+                            {/* Doctor Fees */}
+                            <View style={styles.inputGroup}>
+                                <Text style={styles.label}>Doctor Fees (₹)</Text>
+                                <View style={styles.inputWrapper}>
+                                    <Banknote size={20} color={COLORS.primary.green} style={styles.icon} />
+                                    <TextInput
+                                        style={styles.input}
+                                        placeholder="Enter amount"
+                                        value={visitData.payment.doctorFees}
+                                        onChangeText={(value) => handleVisitChange('payment.doctorFees', value)}
+                                        keyboardType="numeric"
+                                    />
+                                </View>
+                            </View>
+
+                            {/* Payment Status */}
+                            <View style={styles.inputGroup}>
+                                <Text style={styles.label}>Payment Status</Text>
+                                <View style={styles.pickerWrapper}>
+                                    <DollarSign size={20} color={COLORS.primary.green} style={styles.icon} />
+                                    <View style={styles.pickerContainer}>
+                                        <TouchableOpacity
+                                            style={styles.pickerButton}
+                                            onPress={() => {
+                                                Alert.alert(
+                                                    'Payment Status',
+                                                    'Select payment status',
+                                                    [
+                                                        {
+                                                            text: 'Unpaid',
+                                                            onPress: () => handleVisitChange('payment.status', 'Unpaid')
+                                                        },
+                                                        {
+                                                            text: 'Paid',
+                                                            onPress: () => handleVisitChange('payment.status', 'Paid')
+                                                        },
+                                                        { text: 'Cancel', style: 'cancel' }
+                                                    ]
+                                                );
+                                            }}
+                                        >
+                                            <Text style={styles.pickerText}>
+                                                {visitData.payment.status || 'Select status'}
+                                            </Text>
+                                        </TouchableOpacity>
+                                    </View>
+                                </View>
+                            </View>
+
+                            {/* Payment Method */}
+                            <View style={styles.inputGroup}>
+                                <Text style={styles.label}>Payment Method</Text>
+                                <View style={styles.pickerWrapper}>
+                                    <CreditCard size={20} color={COLORS.primary.green} style={styles.icon} />
+                                    <View style={styles.pickerContainer}>
+                                        <TouchableOpacity
+                                            style={styles.pickerButton}
+                                            onPress={() => {
+                                                Alert.alert(
+                                                    'Payment Method',
+                                                    'Select payment method',
+                                                    [
+                                                        {
+                                                            text: 'UPI',
+                                                            onPress: () => handleVisitChange('payment.method', 'UPI')
+                                                        },
+                                                        {
+                                                            text: 'Card',
+                                                            onPress: () => handleVisitChange('payment.method', 'Card')
+                                                        },
+                                                        {
+                                                            text: 'Cash',
+                                                            onPress: () => handleVisitChange('payment.method', 'Cash')
+                                                        },
+                                                        {
+                                                            text: 'Not Paid',
+                                                            onPress: () => handleVisitChange('payment.method', 'Not Paid')
+                                                        },
+                                                        { text: 'Cancel', style: 'cancel' }
+                                                    ]
+                                                );
+                                            }}
+                                        >
+                                            <Text style={styles.pickerText}>
+                                                {visitData.payment.method || 'Select method'}
+                                            </Text>
+                                        </TouchableOpacity>
+                                    </View>
+                                </View>
+                            </View>
+
+                            {/* Transaction ID */}
+                            <View style={styles.inputGroup}>
+                                <Text style={styles.label}>Transaction ID (Optional)</Text>
+                                <View style={styles.inputWrapper}>
+                                    <FileText size={20} color={COLORS.slate[500]} style={styles.icon} />
+                                    <TextInput
+                                        style={styles.input}
+                                        placeholder="Enter transaction ID"
+                                        value={visitData.payment.transactionId}
+                                        onChangeText={(value) => handleVisitChange('payment.transactionId', value)}
+                                    />
+                                </View>
+                            </View>
+                        </GlassCard>
+
                         <GradientButton
                             title="Record Visit"
                             onPress={handleSubmit}
@@ -340,6 +469,26 @@ const styles = StyleSheet.create({
     },
     textArea: {
         minHeight: 100,
+    },
+    pickerWrapper: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: 'rgba(255, 255, 255, 0.7)',
+        borderRadius: theme.borderRadius.md,
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.4)',
+        paddingHorizontal: theme.spacing.md,
+        minHeight: 48,
+    },
+    pickerContainer: {
+        flex: 1,
+    },
+    pickerButton: {
+        paddingVertical: theme.spacing.sm,
+    },
+    pickerText: {
+        fontSize: theme.fontSize.md,
+        color: COLORS.slate[800],
     },
     submitButton: {
         marginBottom: theme.spacing.xl,

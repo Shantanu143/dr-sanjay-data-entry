@@ -9,7 +9,8 @@ import api from '../lib/api';
 import {
     ArrowLeft, Edit, Save, X, User, Phone, Calendar, MapPin,
     FileText, Stethoscope, ClipboardList, CheckCircle, XCircle,
-    Sparkles, Shield, Clock, Mail, Plus, Trash2, Activity, TrendingUp
+    Sparkles, Shield, Clock, Mail, Plus, Trash2, Activity, TrendingUp,
+    DollarSign, CreditCard, Wallet, Banknote
 } from 'lucide-react';
 
 const PatientDetail = () => {
@@ -23,12 +24,26 @@ const PatientDetail = () => {
     const [formData, setFormData] = useState({});
     const [visits, setVisits] = useState([]);
     const [showVisitModal, setShowVisitModal] = useState(false);
+    const [showPaymentModal, setShowPaymentModal] = useState(false);
+    const [selectedVisit, setSelectedVisit] = useState(null);
     const [visitFormData, setVisitFormData] = useState({
         visitDate: new Date().toISOString().split('T')[0],
         notes: '',
         diagnosis: '',
         protocol: '',
         symptoms: '',
+        payment: {
+            doctorFees: '',
+            status: 'Unpaid',
+            method: 'Not Paid',
+            transactionId: '',
+        },
+    });
+    const [paymentFormData, setPaymentFormData] = useState({
+        doctorFees: '',
+        status: 'Unpaid',
+        method: 'Not Paid',
+        transactionId: '',
     });
 
     useEffect(() => {
@@ -100,7 +115,26 @@ const PatientDetail = () => {
 
     const handleVisitFormChange = (e) => {
         const { name, value } = e.target;
-        setVisitFormData((prev) => ({
+        if (name.startsWith('payment.')) {
+            const paymentField = name.split('.')[1];
+            setVisitFormData((prev) => ({
+                ...prev,
+                payment: {
+                    ...prev.payment,
+                    [paymentField]: value,
+                },
+            }));
+        } else {
+            setVisitFormData((prev) => ({
+                ...prev,
+                [name]: value,
+            }));
+        }
+    };
+
+    const handlePaymentFormChange = (e) => {
+        const { name, value } = e.target;
+        setPaymentFormData((prev) => ({
             ...prev,
             [name]: value,
         }));
@@ -118,6 +152,12 @@ const PatientDetail = () => {
                 diagnosis: '',
                 protocol: '',
                 symptoms: '',
+                payment: {
+                    doctorFees: '',
+                    status: 'Unpaid',
+                    method: 'Not Paid',
+                    transactionId: '',
+                },
             });
         } catch (error) {
             console.error('Error adding visit:', error);
@@ -136,6 +176,34 @@ const PatientDetail = () => {
         } catch (error) {
             console.error('Error deleting visit:', error);
             alert('Failed to delete visit');
+        }
+    };
+
+    const handleOpenPaymentModal = (visit) => {
+        setSelectedVisit(visit);
+        setPaymentFormData({
+            doctorFees: visit.payment?.doctorFees || '',
+            status: visit.payment?.status || 'Unpaid',
+            method: visit.payment?.method || 'Not Paid',
+            transactionId: visit.payment?.transactionId || '',
+        });
+        setShowPaymentModal(true);
+    };
+
+    const handleUpdatePayment = async () => {
+        if (!selectedVisit) return;
+
+        try {
+            setSaving(true);
+            await api.put(`/patients/${id}/visits/${selectedVisit._id}/payment`, paymentFormData);
+            await fetchPatient(); // Refresh patient data
+            setShowPaymentModal(false);
+            setSelectedVisit(null);
+        } catch (error) {
+            console.error('Error updating payment:', error);
+            alert('Failed to update payment');
+        } finally {
+            setSaving(false);
         }
     };
 
@@ -525,7 +593,7 @@ const PatientDetail = () => {
 
                                                 {/* Gap indicator */}
                                                 {gap && (
-                                                    <div className="absolute left-14 -top-3 px-3 py-1 rounded-full bg-gradient-to-r from-orange-100 to-pink-100 border border-orange-200">
+                                                    <div className="absolute left-14 -top-3 px-3 py-1 rounded-full bg-gradient-to-r from-orange-100 to-pink-100 border border-orange-200 z-20">
                                                         <p className="text-xs font-semibold text-orange-700 flex items-center gap-1">
                                                             <Clock className="h-3 w-3" />
                                                             {gap} gap
@@ -565,6 +633,61 @@ const PatientDetail = () => {
                                                     </div>
 
                                                     <div className="space-y-3">
+                                                        {/* Payment Information */}
+                                                        <div className="bg-gradient-to-r from-green-50 to-teal-50 rounded-lg p-3 border border-green-200">
+                                                            <div className="flex items-center justify-between mb-2">
+                                                                <Label className="text-xs text-slate-600 flex items-center gap-1 font-semibold">
+                                                                    <DollarSign className="h-3 w-3" />
+                                                                    Payment Information
+                                                                </Label>
+                                                                <Button
+                                                                    size="sm"
+                                                                    variant="outline"
+                                                                    onClick={() => handleOpenPaymentModal(visit)}
+                                                                    className="h-7 text-xs glass hover-lift transition-smooth"
+                                                                >
+                                                                    <Edit className="h-3 w-3 mr-1" />
+                                                                    Update
+                                                                </Button>
+                                                            </div>
+                                                            <div className="grid grid-cols-2 gap-2">
+                                                                <div>
+                                                                    <p className="text-xs text-slate-500">Doctor Fees</p>
+                                                                    <p className="text-sm font-semibold text-slate-700">
+                                                                        ₹{visit.payment?.doctorFees || 0}
+                                                                    </p>
+                                                                </div>
+                                                                <div>
+                                                                    <p className="text-xs text-slate-500">Status</p>
+                                                                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold ${visit.payment?.status === 'Paid'
+                                                                        ? 'bg-green-100 text-green-700'
+                                                                        : 'bg-red-100 text-red-700'
+                                                                        }`}>
+                                                                        {visit.payment?.status === 'Paid' ? (
+                                                                            <CheckCircle className="h-3 w-3" />
+                                                                        ) : (
+                                                                            <XCircle className="h-3 w-3" />
+                                                                        )}
+                                                                        {visit.payment?.status || 'Unpaid'}
+                                                                    </span>
+                                                                </div>
+                                                                <div>
+                                                                    <p className="text-xs text-slate-500">Method</p>
+                                                                    <p className="text-sm font-semibold text-slate-700">
+                                                                        {visit.payment?.method || 'Not Paid'}
+                                                                    </p>
+                                                                </div>
+                                                                {visit.payment?.paidDate && (
+                                                                    <div>
+                                                                        <p className="text-xs text-slate-500">Paid Date</p>
+                                                                        <p className="text-sm font-semibold text-slate-700">
+                                                                            {new Date(visit.payment.paidDate).toLocaleDateString()}
+                                                                        </p>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        </div>
+
                                                         {visit.symptoms && (
                                                             <div>
                                                                 <Label className="text-xs text-slate-500 flex items-center gap-1 mb-1">
@@ -728,6 +851,83 @@ const PatientDetail = () => {
                                     className="glass border-white/40 focus:border-blue-400 focus:ring-blue-400 resize-none"
                                 />
                             </div>
+
+                            {/* Payment Information Section */}
+                            <div className="border-t border-white/20 pt-6 mt-6">
+                                <h3 className="text-lg font-semibold text-slate-700 mb-4 flex items-center gap-2">
+                                    <DollarSign className="h-5 w-5 text-green-600" />
+                                    Payment Information
+                                </h3>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {/* Doctor Fees */}
+                                    <div className="space-y-2">
+                                        <Label className="text-slate-700 font-medium flex items-center gap-1">
+                                            <Banknote className="h-4 w-4 text-green-600" />
+                                            Doctor Fees (₹)
+                                        </Label>
+                                        <Input
+                                            type="number"
+                                            name="payment.doctorFees"
+                                            value={visitFormData.payment.doctorFees}
+                                            onChange={handleVisitFormChange}
+                                            placeholder="Enter amount"
+                                            className="glass border-white/40 focus:border-green-400 focus:ring-green-400 h-11"
+                                        />
+                                    </div>
+
+                                    {/* Payment Status */}
+                                    <div className="space-y-2">
+                                        <Label className="text-slate-700 font-medium flex items-center gap-1">
+                                            <CheckCircle className="h-4 w-4 text-green-600" />
+                                            Payment Status
+                                        </Label>
+                                        <select
+                                            name="payment.status"
+                                            value={visitFormData.payment.status}
+                                            onChange={handleVisitFormChange}
+                                            className="flex h-11 w-full rounded-lg glass border-white/40 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-green-400 transition-all"
+                                        >
+                                            <option value="Unpaid">Unpaid</option>
+                                            <option value="Paid">Paid</option>
+                                        </select>
+                                    </div>
+
+                                    {/* Payment Method */}
+                                    <div className="space-y-2">
+                                        <Label className="text-slate-700 font-medium flex items-center gap-1">
+                                            <CreditCard className="h-4 w-4 text-green-600" />
+                                            Payment Method
+                                        </Label>
+                                        <select
+                                            name="payment.method"
+                                            value={visitFormData.payment.method}
+                                            onChange={handleVisitFormChange}
+                                            className="flex h-11 w-full rounded-lg glass border-white/40 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-green-400 transition-all"
+                                        >
+                                            <option value="Not Paid">Not Paid</option>
+                                            <option value="UPI">UPI</option>
+                                            <option value="Card">Card</option>
+                                            <option value="Cash">Cash</option>
+                                        </select>
+                                    </div>
+
+                                    {/* Transaction ID */}
+                                    <div className="space-y-2">
+                                        <Label className="text-slate-700 font-medium flex items-center gap-1">
+                                            <Wallet className="h-4 w-4 text-green-600" />
+                                            Transaction ID (Optional)
+                                        </Label>
+                                        <Input
+                                            type="text"
+                                            name="payment.transactionId"
+                                            value={visitFormData.payment.transactionId}
+                                            onChange={handleVisitFormChange}
+                                            placeholder="Enter transaction ID"
+                                            className="glass border-white/40 focus:border-green-400 focus:ring-green-400 h-11"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
                         <div className="sticky bottom-0 glass-card rounded-b-2xl p-6 border-t border-white/20 flex gap-3 justify-end">
@@ -752,6 +952,134 @@ const PatientDetail = () => {
                                     <>
                                         <Save className="h-4 w-4 mr-2" />
                                         Save Visit
+                                    </>
+                                )}
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Payment Update Modal */}
+            {showPaymentModal && selectedVisit && (
+                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                    <div className="glass-card rounded-2xl max-w-lg w-full">
+                        <div className="p-6 border-b border-white/20">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2 rounded-lg bg-gradient-to-br from-green-600 to-teal-600">
+                                        <DollarSign className="h-5 w-5 text-white" />
+                                    </div>
+                                    <div>
+                                        <h2 className="text-2xl font-bold bg-gradient-to-r from-green-600 to-teal-600 bg-clip-text text-transparent">
+                                            Update Payment
+                                        </h2>
+                                        <p className="text-sm text-slate-600">Update payment information for this visit</p>
+                                    </div>
+                                </div>
+                                <Button
+                                    variant="outline"
+                                    size="icon"
+                                    onClick={() => setShowPaymentModal(false)}
+                                    className="glass hover-lift transition-smooth"
+                                >
+                                    <X className="h-4 w-4" />
+                                </Button>
+                            </div>
+                        </div>
+
+                        <div className="p-6 space-y-4">
+                            {/* Doctor Fees */}
+                            <div className="space-y-2">
+                                <Label className="text-slate-700 font-medium flex items-center gap-1">
+                                    <Banknote className="h-4 w-4 text-green-600" />
+                                    Doctor Fees (₹)
+                                </Label>
+                                <Input
+                                    type="number"
+                                    name="doctorFees"
+                                    value={paymentFormData.doctorFees}
+                                    onChange={handlePaymentFormChange}
+                                    placeholder="Enter amount"
+                                    className="glass border-white/40 focus:border-green-400 focus:ring-green-400 h-11"
+                                />
+                            </div>
+
+                            {/* Payment Status */}
+                            <div className="space-y-2">
+                                <Label className="text-slate-700 font-medium flex items-center gap-1">
+                                    <CheckCircle className="h-4 w-4 text-green-600" />
+                                    Payment Status
+                                </Label>
+                                <select
+                                    name="status"
+                                    value={paymentFormData.status}
+                                    onChange={handlePaymentFormChange}
+                                    className="flex h-11 w-full rounded-lg glass border-white/40 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-green-400 transition-all"
+                                >
+                                    <option value="Unpaid">Unpaid</option>
+                                    <option value="Paid">Paid</option>
+                                </select>
+                            </div>
+
+                            {/* Payment Method */}
+                            <div className="space-y-2">
+                                <Label className="text-slate-700 font-medium flex items-center gap-1">
+                                    <CreditCard className="h-4 w-4 text-green-600" />
+                                    Payment Method
+                                </Label>
+                                <select
+                                    name="method"
+                                    value={paymentFormData.method}
+                                    onChange={handlePaymentFormChange}
+                                    className="flex h-11 w-full rounded-lg glass border-white/40 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-green-400 transition-all"
+                                >
+                                    <option value="Not Paid">Not Paid</option>
+                                    <option value="UPI">UPI</option>
+                                    <option value="Card">Card</option>
+                                    <option value="Cash">Cash</option>
+                                </select>
+                            </div>
+
+                            {/* Transaction ID */}
+                            <div className="space-y-2">
+                                <Label className="text-slate-700 font-medium flex items-center gap-1">
+                                    <Wallet className="h-4 w-4 text-green-600" />
+                                    Transaction ID (Optional)
+                                </Label>
+                                <Input
+                                    type="text"
+                                    name="transactionId"
+                                    value={paymentFormData.transactionId}
+                                    onChange={handlePaymentFormChange}
+                                    placeholder="Enter transaction ID"
+                                    className="glass border-white/40 focus:border-green-400 focus:ring-green-400 h-11"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="p-6 border-t border-white/20 flex gap-3 justify-end">
+                            <Button
+                                variant="outline"
+                                onClick={() => setShowPaymentModal(false)}
+                                className="glass hover-lift transition-smooth"
+                            >
+                                Cancel
+                            </Button>
+                            <Button
+                                onClick={handleUpdatePayment}
+                                disabled={saving}
+                                className="bg-gradient-to-r from-green-600 to-teal-600 hover:from-green-700 hover:to-teal-700 border-0 shadow-lg hover-lift transition-smooth"
+                            >
+                                {saving ? (
+                                    <div className="flex items-center gap-2">
+                                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                                        <span>Saving...</span>
+                                    </div>
+                                ) : (
+                                    <>
+                                        <Save className="h-4 w-4 mr-2" />
+                                        Update Payment
                                     </>
                                 )}
                             </Button>

@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ArrowLeft, User, Phone, Calendar as CalendarIcon, MapPin, FileText, Stethoscope, ClipboardList } from 'lucide-react-native';
+import { ArrowLeft, User, Phone, Calendar as CalendarIcon, MapPin, FileText, Stethoscope, ClipboardList, DollarSign, CreditCard, Banknote } from 'lucide-react-native';
 import GlassCard from '../components/GlassCard';
 import GradientButton from '../components/GradientButton';
 import api from '../lib/api';
@@ -31,10 +31,27 @@ const RegisterPatientScreen = ({ navigation }) => {
         diagnosis: '',
         protocol: '',
         consent: true,
+        payment: {
+            doctorFees: '',
+            status: 'Unpaid',
+            method: 'Not Paid',
+            transactionId: '',
+        },
     });
 
     const handleChange = (field, value) => {
-        setFormData({ ...formData, [field]: value });
+        if (field.startsWith('payment.')) {
+            const paymentField = field.split('.')[1];
+            setFormData({
+                ...formData,
+                payment: {
+                    ...formData.payment,
+                    [paymentField]: value,
+                },
+            });
+        } else {
+            setFormData({ ...formData, [field]: value });
+        }
     };
 
     const handleSubmit = async () => {
@@ -230,6 +247,107 @@ const RegisterPatientScreen = ({ navigation }) => {
                         </View>
                     </GlassCard>
 
+                    <GlassCard style={styles.card}>
+                        <Text style={styles.sectionTitle}>Payment Information</Text>
+
+                        {/* Doctor Fees */}
+                        <View style={styles.inputGroup}>
+                            <Text style={styles.label}>Doctor Fees (₹)</Text>
+                            <View style={styles.inputWrapper}>
+                                <Banknote size={20} color={COLORS.primary.green} style={styles.icon} />
+                                <TextInput
+                                    style={styles.input}
+                                    placeholder="Enter amount"
+                                    value={formData.payment.doctorFees}
+                                    onChangeText={(value) => handleChange('payment.doctorFees', value)}
+                                    keyboardType="numeric"
+                                />
+                            </View>
+                        </View>
+
+                        {/* Payment Status */}
+                        <View style={styles.inputGroup}>
+                            <Text style={styles.label}>Payment Status</Text>
+                            <TouchableOpacity
+                                style={styles.pickerButton}
+                                onPress={() => {
+                                    Alert.alert(
+                                        'Payment Status',
+                                        'Select payment status',
+                                        [
+                                            {
+                                                text: 'Unpaid',
+                                                onPress: () => handleChange('payment.status', 'Unpaid')
+                                            },
+                                            {
+                                                text: 'Paid',
+                                                onPress: () => handleChange('payment.status', 'Paid')
+                                            },
+                                            { text: 'Cancel', style: 'cancel' }
+                                        ]
+                                    );
+                                }}
+                            >
+                                <DollarSign size={20} color={COLORS.primary.green} style={styles.icon} />
+                                <Text style={styles.pickerText}>
+                                    {formData.payment.status || 'Select status'}
+                                </Text>
+                            </TouchableOpacity>
+                        </View>
+
+                        {/* Payment Method */}
+                        <View style={styles.inputGroup}>
+                            <Text style={styles.label}>Payment Method</Text>
+                            <TouchableOpacity
+                                style={styles.pickerButton}
+                                onPress={() => {
+                                    Alert.alert(
+                                        'Payment Method',
+                                        'Select payment method',
+                                        [
+                                            {
+                                                text: 'UPI',
+                                                onPress: () => handleChange('payment.method', 'UPI')
+                                            },
+                                            {
+                                                text: 'Card',
+                                                onPress: () => handleChange('payment.method', 'Card')
+                                            },
+                                            {
+                                                text: 'Cash',
+                                                onPress: () => handleChange('payment.method', 'Cash')
+                                            },
+                                            {
+                                                text: 'Not Paid',
+                                                onPress: () => handleChange('payment.method', 'Not Paid')
+                                            },
+                                            { text: 'Cancel', style: 'cancel' }
+                                        ]
+                                    );
+                                }}
+                            >
+                                <CreditCard size={20} color={COLORS.primary.green} style={styles.icon} />
+                                <Text style={styles.pickerText}>
+                                    {formData.payment.method || 'Select method'}
+                                </Text>
+                            </TouchableOpacity>
+                        </View>
+
+                        {/* Transaction ID */}
+                        <View style={styles.inputGroup}>
+                            <Text style={styles.label}>Transaction ID (Optional)</Text>
+                            <View style={styles.inputWrapper}>
+                                <FileText size={20} color={COLORS.slate[500]} style={styles.icon} />
+                                <TextInput
+                                    style={styles.input}
+                                    placeholder="Enter transaction ID"
+                                    value={formData.payment.transactionId}
+                                    onChangeText={(value) => handleChange('payment.transactionId', value)}
+                                />
+                            </View>
+                        </View>
+                    </GlassCard>
+
                     <GradientButton
                         title="Register Patient"
                         onPress={handleSubmit}
@@ -331,6 +449,22 @@ const styles = StyleSheet.create({
     genderTextActive: {
         color: COLORS.white,
         fontWeight: theme.fontWeight.semibold,
+    },
+    pickerButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: 'rgba(255, 255, 255, 0.7)',
+        borderRadius: theme.borderRadius.md,
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.4)',
+        paddingHorizontal: theme.spacing.md,
+        minHeight: 48,
+    },
+    pickerText: {
+        flex: 1,
+        fontSize: theme.fontSize.md,
+        color: COLORS.slate[800],
+        paddingVertical: theme.spacing.sm,
     },
     submitButton: {
         marginBottom: theme.spacing.xl,

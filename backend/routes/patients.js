@@ -204,6 +204,13 @@ router.post('/:id/visits', protect, async (req, res) => {
             diagnosis: req.body.diagnosis,
             protocol: req.body.protocol,
             symptoms: req.body.symptoms,
+            payment: {
+                doctorFees: req.body.payment?.doctorFees || 0,
+                status: req.body.payment?.status || 'Unpaid',
+                method: req.body.payment?.method || 'Not Paid',
+                paidDate: req.body.payment?.status === 'Paid' ? (req.body.payment?.paidDate || new Date()) : undefined,
+                transactionId: req.body.payment?.transactionId || '',
+            },
             createdBy: req.user._id,
         };
 
@@ -256,6 +263,50 @@ router.delete('/:id/visits/:visitId', protect, async (req, res) => {
         await patient.save();
 
         res.json({ message: 'Visit removed', patient });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+// @route   PUT /api/patients/:id/visits/:visitId/payment
+// @desc    Update payment information for a specific visit
+// @access  Private
+router.put('/:id/visits/:visitId/payment', protect, async (req, res) => {
+    try {
+        const patient = await Patient.findById(req.params.id);
+
+        if (!patient) {
+            return res.status(404).json({ message: 'Patient not found' });
+        }
+
+        const visit = patient.visits.id(req.params.visitId);
+
+        if (!visit) {
+            return res.status(404).json({ message: 'Visit not found' });
+        }
+
+        // Update payment information
+        if (req.body.doctorFees !== undefined) {
+            visit.payment.doctorFees = req.body.doctorFees;
+        }
+        if (req.body.status !== undefined) {
+            visit.payment.status = req.body.status;
+            // If status is being set to Paid, record the payment date
+            if (req.body.status === 'Paid' && !visit.payment.paidDate) {
+                visit.payment.paidDate = new Date();
+            }
+        }
+        if (req.body.method !== undefined) {
+            visit.payment.method = req.body.method;
+        }
+        if (req.body.transactionId !== undefined) {
+            visit.payment.transactionId = req.body.transactionId;
+        }
+
+        await patient.save();
+
+        res.json({ message: 'Payment updated successfully', patient });
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Server error' });

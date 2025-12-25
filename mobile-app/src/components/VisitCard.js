@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
-import { Calendar, Activity, Stethoscope, ClipboardList, FileText, Trash2 } from 'lucide-react-native';
+import { Calendar, Activity, Stethoscope, ClipboardList, FileText, Trash2, DollarSign, CheckCircle, XCircle } from 'lucide-react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import GlassCard from './GlassCard';
 import { theme } from '../styles/theme';
 import { COLORS } from '../constants';
@@ -50,6 +51,68 @@ const VisitCard = ({ visit, visitNumber, isFirst, onDelete }) => {
             </View>
 
             <View style={styles.details}>
+                {/* Payment Information */}
+                <LinearGradient
+                    colors={['rgba(16, 185, 129, 0.1)', 'rgba(20, 184, 166, 0.1)']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={styles.paymentCard}
+                >
+                    <View style={styles.paymentHeader}>
+                        <View style={styles.detailHeader}>
+                            <DollarSign size={14} color={COLORS.primary.green} />
+                            <Text style={[styles.detailLabel, { color: COLORS.primary.green }]}>
+                                PAYMENT INFORMATION
+                            </Text>
+                        </View>
+                    </View>
+                    <View style={styles.paymentGrid}>
+                        <View style={styles.paymentItem}>
+                            <Text style={styles.paymentLabel}>Doctor Fees</Text>
+                            <Text style={styles.paymentValue}>
+                                ₹{visit.payment?.doctorFees || 0}
+                            </Text>
+                        </View>
+                        <View style={styles.paymentItem}>
+                            <Text style={styles.paymentLabel}>Status</Text>
+                            <View style={[
+                                styles.statusBadge,
+                                visit.payment?.status === 'Paid'
+                                    ? styles.statusPaid
+                                    : styles.statusUnpaid
+                            ]}>
+                                {visit.payment?.status === 'Paid' ? (
+                                    <CheckCircle size={12} color={COLORS.success} />
+                                ) : (
+                                    <XCircle size={12} color={COLORS.error} />
+                                )}
+                                <Text style={[
+                                    styles.statusText,
+                                    visit.payment?.status === 'Paid'
+                                        ? { color: COLORS.success }
+                                        : { color: COLORS.error }
+                                ]}>
+                                    {visit.payment?.status || 'Unpaid'}
+                                </Text>
+                            </View>
+                        </View>
+                        <View style={styles.paymentItem}>
+                            <Text style={styles.paymentLabel}>Method</Text>
+                            <Text style={styles.paymentValue}>
+                                {visit.payment?.method || 'Not Paid'}
+                            </Text>
+                        </View>
+                        {visit.payment?.paidDate && (
+                            <View style={styles.paymentItem}>
+                                <Text style={styles.paymentLabel}>Paid Date</Text>
+                                <Text style={styles.paymentValue}>
+                                    {new Date(visit.payment.paidDate).toLocaleDateString()}
+                                </Text>
+                            </View>
+                        )}
+                    </View>
+                </LinearGradient>
+
                 {visit.symptoms && (
                     <View style={styles.detailItem}>
                         <View style={styles.detailHeader}>
@@ -151,6 +214,53 @@ const styles = StyleSheet.create({
         backgroundColor: 'rgba(255, 255, 255, 0.5)',
         padding: theme.spacing.sm,
         borderRadius: theme.borderRadius.sm,
+    },
+    paymentCard: {
+        padding: theme.spacing.md,
+        borderRadius: theme.borderRadius.md,
+        borderWidth: 1,
+        borderColor: 'rgba(16, 185, 129, 0.2)',
+    },
+    paymentHeader: {
+        marginBottom: theme.spacing.sm,
+    },
+    paymentGrid: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: theme.spacing.sm,
+    },
+    paymentItem: {
+        flex: 1,
+        minWidth: '45%',
+    },
+    paymentLabel: {
+        fontSize: theme.fontSize.xs,
+        color: COLORS.slate[500],
+        marginBottom: 4,
+    },
+    paymentValue: {
+        fontSize: theme.fontSize.sm,
+        fontWeight: theme.fontWeight.semibold,
+        color: COLORS.slate[800],
+    },
+    statusBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        alignSelf: 'flex-start',
+        paddingHorizontal: theme.spacing.sm,
+        paddingVertical: 4,
+        borderRadius: theme.borderRadius.full,
+        gap: 4,
+    },
+    statusPaid: {
+        backgroundColor: 'rgba(16, 185, 129, 0.15)',
+    },
+    statusUnpaid: {
+        backgroundColor: 'rgba(239, 68, 68, 0.15)',
+    },
+    statusText: {
+        fontSize: theme.fontSize.xs,
+        fontWeight: theme.fontWeight.semibold,
     },
 });
 

@@ -66,6 +66,30 @@ const patientSchema = new mongoose.Schema(
                     type: String,
                     trim: true,
                 },
+                payment: {
+                    doctorFees: {
+                        type: Number,
+                        default: 0,
+                        min: 0,
+                    },
+                    status: {
+                        type: String,
+                        enum: ['Paid', 'Unpaid'],
+                        default: 'Unpaid',
+                    },
+                    method: {
+                        type: String,
+                        enum: ['UPI', 'Card', 'Cash', 'Not Paid'],
+                        default: 'Not Paid',
+                    },
+                    paidDate: {
+                        type: Date,
+                    },
+                    transactionId: {
+                        type: String,
+                        trim: true,
+                    },
+                },
                 createdBy: {
                     type: mongoose.Schema.Types.ObjectId,
                     ref: 'User',
